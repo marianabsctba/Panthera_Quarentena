@@ -25,3 +25,15 @@ aparecem na saída direta da ferramenta. Algumas são esperadas, como IDs do MIT
 e textos que o aluno precisa decodificar.
 
 O deploy roda em `.github/workflows/pages.yml` a cada push na `main`.
+
+## Código-fonte dos programas
+
+A cada deploy, `imagem/fontes.sh` envia para a release
+[`fontes`](https://github.com/marianabsctba/Panthera_Quarentena/releases/tag/fontes)
+o que ainda falta dos programas GPL, LGPL e MPL da imagem. Se algum falhar, o
+site novo não sai e o anterior continua no ar, com os links dele valendo.
+
+A falha esperada é um pacote recém-atualizado: o GitLab do Alpine bloqueia os
+servidores do Actions, e o commit da receita pode ainda não estar no espelho do
+GitHub. Basta refazer o deploy mais tarde. Com pressa, rode o script numa máquina
+que alcance o GitLab, envie o arquivo para a release e refaça o deploy.
