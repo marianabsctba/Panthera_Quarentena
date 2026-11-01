@@ -121,6 +121,11 @@ def copiar(origem, destino):
     shutil.copyfile(origem, destino)
 
 
+# Copia do codigo-fonte, enviada por imagem/fontes.sh com a mesma regra de licenca.
+FONTES = "https://github.com/marianabsctba/Panthera_Quarentena/releases/download/fontes/"
+SEABIOS = "1.16.2"
+
+
 def projetos_do_linux():
     """Agrupa os pacotes da imagem por projeto de origem."""
     grupos = {}
@@ -132,6 +137,8 @@ def projetos_do_linux():
             g = grupos.setdefault(origem, {"origem": origem, "versao": versao, "licencas": [], "pacotes": [],
                                            "commit": commit, "repo": repo, "site": site})
             g["pacotes"].append(pacote)
+            if re.search("GPL|MPL", licenca):
+                g["copia"] = f"{FONTES}{origem}-{versao}.tar.gz"
             if licenca not in g["licencas"]:
                 g["licencas"].append(licenca)
     # Sem estes a lista esta errada: melhor falhar o build que publicar sem o aviso.
@@ -163,8 +170,8 @@ def gerar_licencas():
         ("xterm.js", versao_npm("@xterm/xterm"), "MIT", "licencas/xterm.txt", "https://github.com/xtermjs/xterm.js"),
         ("addon-fit do xterm.js", versao_npm("@xterm/addon-fit"), "MIT", "licencas/addon-fit.txt", "https://github.com/xtermjs/xterm.js"),
         ("three.js", "r" + three, "MIT", "vendor/three.min.js", "https://github.com/mrdoob/three.js/tree/r" + three),
-        ("SeaBIOS (seabios.bin e vgabios.bin)", "1.16.2", "LGPL-3.0", "licencas/LGPL-3.0-only.txt",
-         "https://github.com/coreboot/seabios/tree/rel-1.16.2"),
+        ("SeaBIOS (seabios.bin e vgabios.bin)", SEABIOS, "LGPL-3.0", "licencas/LGPL-3.0-only.txt",
+         f"{FONTES}seabios-{SEABIOS}.tar.gz"),
     ]
     linhas_nav = "".join(
         f'<tr><td>{escape(n)}</td><td>{escape(v)}</td><td><a href="{t}">{escape(l)}</a></td>'
@@ -174,7 +181,8 @@ def gerar_licencas():
     linhas_linux = "".join(
         f'<tr><td>{escape(p["origem"])}<small>{escape(", ".join(p["pacotes"]))}</small></td>'
         f'<td>{escape(p["versao"])}</td><td>{escape("; ".join(p["licencas"]))}</td>'
-        f'<td><a href="https://gitlab.alpinelinux.org/alpine/aports/-/tree/{p["commit"]}/{p["repo"]}/{escape(p["origem"])}">receita</a>'
+        '<td>' + (f'<a href="{escape(p["copia"])}">código-fonte</a> · ' if "copia" in p else "")
+        + f'<a href="https://gitlab.alpinelinux.org/alpine/aports/-/tree/{p["commit"]}/{p["repo"]}/{escape(p["origem"])}">receita</a>'
         + (f' · <a href="{escape(p["site"])}">projeto</a>' if p["site"] else "") + "</td></tr>\n"
         for p in projetos)
     lista_textos = "".join(f'<li><a href="licencas/{n}">{escape(n[:-4])}</a></li>' for n in textos)
@@ -219,7 +227,7 @@ ul {{ padding-left:20px; }}
 
 <h2>O que roda no Linux</h2>
 <p>São os pacotes oficiais do Alpine Linux 3.21 para x86, sem alteração nos programas. Para caber no navegador, a imagem leva menos módulos do kernel e nenhuma documentação. O <a href="https://github.com/marianabsctba/Panthera_Quarentena/blob/main/pages/imagem/construir.sh">script de montagem</a> mostra cada passo.</p>
-<p>A receita de cada linha traz a versão exata, os patches aplicados e o endereço do código original. Os arquivos originais também ficam no <a href="https://distfiles.alpinelinux.org/distfiles/v3.21/">acervo do Alpine</a>.</p>
+<p>Os programas sob GPL, LGPL ou MPL têm uma cópia do código-fonte guardada neste projeto, na <a href="https://github.com/marianabsctba/Panthera_Quarentena/releases/tag/fontes">página de arquivos</a>: cada arquivo traz a receita de compilação, com os patches, e os arquivos originais daquela versão. Os demais têm a receita, que aponta para o código original, também disponível no <a href="https://distfiles.alpinelinux.org/distfiles/v3.21/">acervo do Alpine</a>.</p>
 <div class="tabela"><table>
 <thead><tr><th>Projeto e pacotes</th><th>Versão</th><th>Licença declarada</th><th>Fonte</th></tr></thead>
 <tbody>

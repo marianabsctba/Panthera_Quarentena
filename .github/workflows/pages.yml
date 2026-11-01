@@ -7,8 +7,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -17,8 +15,12 @@ concurrency:
 jobs:
   construir:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -26,6 +28,11 @@ jobs:
         run: |
           sudo bash pages/imagem/construir.sh
           sudo chown -R "$USER" pages/saida
+      # Sem a copia do codigo-fonte no ar, o site novo nao sai.
+      - name: Copia do codigo-fonte na release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: sudo --preserve-env=GH_TOKEN,GITHUB_REPOSITORY bash pages/imagem/fontes.sh
       - name: Site e estado do Linux ja ligado
         working-directory: pages
         run: |
@@ -39,6 +46,9 @@ jobs:
   publicar:
     needs: construir
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
