@@ -27,7 +27,8 @@ PASTA="$AUX/fontes"
 rm -rf "$PASTA"
 mkdir -p "$PASTA/aports"
 git -C "$PASTA/aports" init -q
-git -C "$PASTA/aports" remote add origin https://github.com/alpinelinux/aports.git
+git -C "$PASTA/aports" remote add origin https://gitlab.alpinelinux.org/alpine/aports.git
+git -C "$PASTA/aports" remote add espelho https://github.com/alpinelinux/aports.git
 
 existentes=""
 if [ -z "${SEM_ENVIO:-}" ]; then
@@ -49,15 +50,20 @@ falhas=""
 montar() {
   local ori="$1" ver="$2" com="$3" rep="$4" nome="$ori-$ver.tar.gz"
   local dir="$PASTA/$nome.d"
-  mkdir -p "$dir"
-  git -C "$PASTA/aports" fetch -q --depth 1 --filter=blob:none origin "$com"
-  git -C "$PASTA/aports" checkout -q FETCH_HEAD -- "$rep/$ori"
-  cp -r "$PASTA/aports/$rep/$ori" "$dir/receita"
-  mkdir "$dir/originais"
+  # Chamada com ||, esta funcao nao tem set -e: cada passo precisa parar sozinho.
+  mkdir -p "$dir/originais" || return 1
+  # O espelho no GitHub atrasa: commit recente so existe no repositorio do Alpine.
+  git -C "$PASTA/aports" fetch -q --depth 1 --filter=blob:none origin "$com" \
+    || git -C "$PASTA/aports" fetch -q --depth 1 --filter=blob:none espelho "$com" || return 1
+  git -C "$PASTA/aports" checkout -q "$com" -- "$rep/$ori" || return 1
+  cp -r "$PASTA/aports/$rep/$ori" "$dir/receita" || return 1
+  [ -s "$dir/receita/APKBUILD" ] || { echo "sem APKBUILD: $ori" >&2; return 1; }
   dentro "cd '/fontes/$nome.d/receita' && SRCDEST='/fontes/$nome.d/originais' \
-    DISTFILES_MIRROR=https://distfiles.alpinelinux.org/distfiles/$ALPINE_RAMO abuild -F fetch verify" >/dev/null
-  tar czf "$PASTA/$nome" -C "$dir" --transform "s,^,$ori-$ver/," receita originais
-  enviar "$PASTA/$nome"
+    DISTFILES_MIRROR=https://distfiles.alpinelinux.org/distfiles/$ALPINE_RAMO abuild -F fetch verify" >/dev/null || return 1
+  # O src/ que o abuild deixa na receita so tem atalhos para os originais.
+  rm -rf "$dir/receita/src"
+  tar czf "$PASTA/$nome" -C "$dir" --transform "s,^,$ori-$ver/," receita originais || return 1
+  enviar "$PASTA/$nome" || return 1
 }
 
 while IFS=$'\t' read -r ori ver com rep; do
